@@ -1,0 +1,361 @@
+---
+title: "BIO2105: Chapter 9 — Regression Analysis"
+subtitle: "Correlation, Simple Linear Regression, and Residual Diagnostics (30 Points)"
+author: "Student Name: Gianan, Rona Jane H., Oabel, Maria Charice R., Tibayan, Isaiah Elijah N. | Section: BIO2105-4"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+  pdf_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Assignment & GitHub Submission Instructions
+
+This R Markdown starter template (`BIO2105_Regression_Analysis.Rmd`) accompanies the **BIO2105 Chapter 9: Regression Analysis** lecture. All datasets used below (`trees` and `women`) are built directly into base R—no external packages or CSV downloads are required.
+
+1.  **Complete the Analysis:** Run each code chunk step by step in RStudio and replace the bullet prompts in every **Your Interpretation** block with your own statistical conclusions.
+2.  **Knit the Report:** Click **Knit** in RStudio to render this file into `BIO2105_Regression_Analysis.html` (or `.pdf`). Verify that all tables, equations, and plots display properly without errors.
+3.  **Organize Your GitHub Repository:** Push your completed files to a **public** GitHub repository named **`BIO2105-Regression-Analysis`** with the following structure:
+
+``` text
+BIO2105-Regression-Analysis/
+|-- README.md                            (Mandatory)
+|-- BIO2105_Regression_Analysis.R        (Mandatory)
+|-- BIO2105_Regression_Analysis.Rmd      (Recommended / Starter Template)
+|-- BIO2105_Regression_Analysis.html     (Mandatory: .html or .pdf rendered report)
+`-- data/                                (Optional)
+```
+
+4.  **Submit on Canvas:** Copy your public GitHub repository URL (e.g., `https://github.com/your-username/BIO2105-Regression-Analysis`) and submit it as a **Website URL** on Canvas before the deadline. *(Note: Submitting standalone `.R` files or screenshots directly to Canvas results in a 4-point deduction.)*
+
+------------------------------------------------------------------------
+
+# Part I: Black Cherry Trees Dataset (`trees`) — 18 Points
+
+The built-in `trees` dataset contains measurements of diameter (`Girth`, in inches at 4 ft 6 in above ground), `Height` (in feet), and timber `Volume` (in cubic feet) for $n = 31$ felled black cherry trees. Here, we investigate whether tree girth ($x$) can predict timber volume ($y$).
+
+### Task 1: Variable Roles & Data Exploration (2 Points)
+
+- **Goal:** Inspect the dataset structure and define the predictor ($x$) and response ($y$) variables.
+
+```{r part1-task1}
+# Load built-in dataset
+data(trees)
+
+# Inspect first few rows, structure, and summary statistics
+head(trees)
+str(trees)
+summary(trees[, c("Girth", "Volume")])
+```
+> **Your Interpretation (Task 1):**
+>**1(a) Variable Roles and Data Exploration**
+
+The predictor variable (X) is Girth, measured in inches, while the response variable (Y) is Volume, measured in cubic feet. The dataset contains 31 observations and three numerical variables: Girth, Height, and Volume. Correlation is symmetric because switching the two variables does not change the correlation coefficient. However, regression is not symmetric because it depends on which variable is used to predict the other.
+
+------------------------------------------------------------------------
+
+### Task 2: Scatter Plot with Fitted Regression Line (3 Points)
+
+- **Goal:** Visualize the linear relationship between `Girth` ($x$) and `Volume` ($y$) and overlay the Ordinary Least Squares (OLS) regression line.
+
+```{r part-task2}
+# Fit simple linear regression model
+tree_model <- lm(Volume ~ Girth, data = trees)
+
+# Create scatter plot with OLS regression line
+plot(trees$Girth, trees$Volume,
+     xlab = "Tree Girth (inches)",
+     ylab = "Timber Volume (cubic feet)",
+     main = "Black Cherry Trees: Girth vs. Timber Volume (n = 31)",
+     pch = 19, col = "steelblue", cex = 1.2)
+
+grid(col = "gray80")
+abline(tree_model, col = "darkorange", lwd = 2)
+
+legend("topleft",
+       legend = c("Observed Trees", "OLS Regression Line"),
+       pch = c(19, NA),
+       lty = c(NA, 1),
+       col = c("steelblue", "darkorange"),
+       lwd = c(NA, 2))
+```
+**Your Interpretation (Task 2):**
+
+**1(b) Scatter Plot**
+
+The scatter plot shows a strong positive linear relationship between Girth and Volume. As the tree's girth increases, its timber volume also tends to increase. The upward-sloping regression line supports this positive association.
+> - Describe the direction, form, and apparent strength of the relationship shown in the scatter plot.
+
+------------------------------------------------------------------------
+
+### Task 3: Pearson's Correlation Coefficient ($r$) — Built-in vs. Manual Formula (3 Points)
+
+- **Goal:** Compute Pearson's $r$ using `cor()`, verify it manually using the standardized average product formula, and test for statistical significance using `cor.test()`.
+
+$$r = \frac{1}{n-1}\sum_{i=1}^{n}\left(\frac{x_i - \bar{x}}{s_x}\right)\left(\frac{y_i - \bar{y}}{s_y}\right)$$
+
+```{r part1-task3}
+# Built-in Pearson correlation
+r_builtin <- cor(trees$Girth, trees$Volume)
+print(paste("Built-in correlation r =", round(r_builtin, 6)))
+
+# Manual calculation using standardized units
+n <- nrow(trees)
+x_bar <- mean(trees$Girth)
+y_bar <- mean(trees$Volume)
+s_x <- sd(trees$Girth)
+s_y <- sd(trees$Volume)
+
+r_manual <- (1 / (n - 1)) * sum(((trees$Girth - x_bar) / s_x) * ((trees$Volume - y_bar) / s_y))
+print(paste("Manual correlation r   =", round(r_manual, 6)))
+
+# Significance test for correlation
+cor.test(trees$Girth, trees$Volume)
+```
+
+> **Your Interpretation (Task 3):**
+>**2(a) Pearson's Correlation Coefficient**
+
+The Pearson correlation coefficient obtained using R's cor() function is 0.9671194, while the manually calculated result is 0.967119. Both results match, confirming the accuracy of the manual calculation. The correlation indicates a very strong positive linear relationship between Girth and Volume. The correlation test produced a t-statistic of 20.478, with 29 degrees of freedom and a p-value less than 2.2 × 10⁻¹⁶. Since the p-value is less than 0.05, the null hypothesis is rejected. Therefore, there is a statistically significant positive linear relationship between Girth and Volume.
+> - Confirm that `r_builtin` and `r_manual` match, and state the $t$-statistic, degrees of freedom, and $p$-value from `cor.test()`.
+
+------------------------------------------------------------------------
+
+### Task 4: Invariance Under Linear Transformation (2 Points)
+
+- **Goal:** Verify the theorem $r(cx + d, ay + b) = r(x, y)$ for $c > 0, a > 0$ by converting `Girth` from inches to centimeters ($1\text{ in} = 2.54\text{ cm}$) and `Volume` from cubic feet to liters ($1\text{ ft}^3 = 28.3168\text{ L}$).
+
+```{r part1-task4}
+# Convert units (linear scaling with positive constants)
+girth_cm <- 2.54 * trees$Girth
+volume_L <- 28.3168 * trees$Volume
+
+# Compare correlation before and after unit conversion
+r_metric <- cor(girth_cm, volume_L)
+
+print(paste("Original r (in, ft^3):", round(r_builtin, 6)))
+print(paste("Metric r   (cm, L)   :", round(r_metric, 6)))
+print(paste("Absolute difference  :", abs(r_builtin - r_metric)))
+```
+
+> **Your Interpretation (Task 4):**
+>**2(b) Linear Transformation Invariance**
+
+After converting Girth from inches to centimeters and Volume from cubic feet to liters, the correlation coefficient remains approximately 0.967119. This demonstrates the invariance of Pearson's correlation under positive linear transformations because changing the measurement units does not affect the strength or direction of the relationship between the two variables.
+> - Explain why changing measurement units does not change $r$, and state whether the regression slope $b_1$ remains invariant under the same unit conversion.
+
+------------------------------------------------------------------------
+
+### Task 5: Simple Linear Regression Estimation & Centroid Property (3 Points)
+
+- **Goal:** Extract the OLS estimates $b_0$ and $b_1$, verify $b_1 = r \cdot (s_y / s_x)$, and confirm that the regression line passes through the centroid $(\bar{x}, \bar{y})$.
+
+```{r part1-task5}
+# Extract model coefficients
+coeffs <- coef(tree_model)
+b0 <- coeffs[1]
+b1 <- coeffs[2]
+print(coeffs)
+
+# Verify slope relationship with r: b1 = r * (s_y / s_x)
+b1_from_r <- r_builtin * (s_y / s_x)
+print(paste("Slope from lm()        :", round(b1, 6)))
+print(paste("Slope from r*(s_y/s_x) :", round(b1_from_r, 6)))
+
+# Verify regression line passes through (x_bar, y_bar)
+y_hat_at_xbar <- b0 + b1 * x_bar
+print(paste("Sample mean y_bar      :", round(y_bar, 6)))
+print(paste("Predicted y at x_bar   :", round(y_hat_at_xbar, 6)))
+```
+
+> **Your Interpretation (Task 5):**
+>**3(a) Regression Model and Parameter Estimation**
+
+The fitted regression equation is ŷ = -36.943459 + 5.065856x. The slope indicates that for every additional inch of tree Girth, the predicted timber Volume increases by approximately 5.065856 cubic feet. The intercept represents the predicted Volume when Girth is zero, although it has limited practical meaning because this value is outside the observed data range.
+**3(b) Verification of Slope Formula and Centroid Property**
+
+The slope calculated using the formula r × (s_y / s_x) is 5.065856, which matches the slope obtained from the regression model. The predicted Volume at the mean Girth is 30.17097, which is equal to the actual mean Volume of 30.17097. This confirms that the regression line passes through the centroid of the data.
+
+------------------------------------------------------------------------
+
+### Task 6: Coefficient of Determination ($R^2$) (2 Points)
+
+- **Goal:** Compute $R^2$ from the model summary and verify that $R^2 = r^2$ in simple linear regression.
+
+```{r part1-task6}
+r_squared <- summary(tree_model)$r.squared
+print(paste("R-squared from summary():", round(r_squared, 6)))
+print(paste("r^2 from correlation   :", round(r_builtin^2, 6)))
+```
+
+> **Your Interpretation (Task 6):**
+>**3(c) Coefficient of Determination (R²)**
+
+The coefficient of determination (R²) is 0.9353199, which is equivalent to 93.53%. This indicates that approximately 93.53% of the variation in tree Volume can be explained by Girth using the fitted linear regression model, while the remaining 6.47% is unexplained by the model. This demonstrates that the regression model has a strong explanatory power.
+
+
+------------------------------------------------------------------------
+
+### Task 7: Inference for Slope & Confidence vs. Prediction Intervals (3 Points)
+
+- **Goal:** Test $H_0: \beta_1 = 0$, compute the 95% confidence interval for $\beta_1$, and compare 95% confidence intervals (for mean response) against 95% prediction intervals (for individual trees) at `Girth = c(10, 14, 18)` inches.
+
+```{r part1-task7}
+# Full regression summary and 95% CI for parameters
+summary(tree_model)
+confint(tree_model, level = 0.95)
+
+# New girth values for prediction
+new_trees <- data.frame(Girth = c(10, 14, 18))
+
+# 95% Confidence Interval for MEAN volume
+ci_mean <- predict(tree_model, newdata = new_trees, interval = "confidence", level = 0.95)
+print("95% Confidence Intervals (Mean Response):")
+print(round(ci_mean, 3))
+
+# 95% Prediction Interval for INDIVIDUAL tree volume
+pi_indiv <- predict(tree_model, newdata = new_trees, interval = "prediction", level = 0.95)
+print("95% Prediction Intervals (Individual Response):")
+print(round(pi_indiv, 3))
+```
+
+> **Your Interpretation (Task 7):**
+>**4(a) Hypothesis Testing and Confidence Intervals**
+
+The regression slope is statistically significant because its p-value is less than 0.05. Therefore, the null hypothesis is rejected, indicating that Girth is a significant predictor of Volume. The 95% confidence interval for the slope ranges from 4.559914 to 5.571799, which does not include zero.
+
+**4(b) Confidence Interval vs. Prediction Interval**
+
+The confidence intervals estimate the mean Volume of trees at Girth values of 10, 14, and 18 inches, while the prediction intervals estimate the Volume of individual trees at these values. The prediction intervals are wider than the confidence intervals because they account for individual variation as well as uncertainty in estimating the mean response. This demonstrates that predicting an individual tree's Volume involves greater uncertainty than estimating the average Volume.
+>
+------------------------------------------------------------------------
+
+# Part II: American Women Height & Weight Dataset (`women`) — 12 Points
+
+The built-in `women` dataset provides average weights (`weight`, in lbs) for American women aged 30–39 across $n = 15$ discrete heights (`height`, in inches, from 58 to 72 inches). We fit a simple linear regression predicting `weight` ($y$) from `height` ($x$) and evaluate model assumptions.
+
+### Task 8: Model Fitting & Scatter Plot (3 Points)
+
+- **Goal:** Fit `lm(weight ~ height, data = women)`, inspect the model summary, and plot the data with the fitted line.
+
+```{r part2-task8}
+data(women)
+head(women)
+
+women_model <- lm(weight ~ height, data = women)
+summary(women_model)
+
+plot(women$height, women$weight,
+     xlab = "Height (inches)",
+     ylab = "Weight (lbs)",
+     main = "American Women (Ages 30-39): Height vs. Weight (n = 15)",
+     pch = 19, col = "steelblue", cex = 1.2)
+grid(col = "gray80")
+abline(women_model, col = "darkorange", lwd = 2)
+legend("topleft",
+       legend = c("Observed Data", "OLS Regression Line"),
+       pch = c(19, NA), lty = c(NA, 1),
+       col = c("steelblue", "darkorange"), lwd = c(NA, 2))
+```
+
+> **Your Interpretation (Task 8):**
+>**8. Model Fitting and Scatter Plot**
+
+The scatter plot shows a strong positive linear relationship between Height and Weight. As Height increases, Weight also tends to increase. The fitted regression line follows the general pattern of the observed data points. The model has an R-squared value of 0.991, indicating that approximately 99.1% of the variation in Weight can be explained by Height. This suggests that the linear regression model provides a strong fit to the dataset.
+> 
+------------------------------------------------------------------------
+
+### Task 9: ANOVA Table & Sum of Squares Decomposition (4 Points)
+
+- **Goal:** Generate the ANOVA table via `anova()` and manually verify the sum-of-squares identity:
+
+$$SS_{\text{Total}} = SS_{\text{Regression}} + SS_{\text{Error}}$$
+
+```{r part2-task9}
+# Built-in ANOVA table
+anova(women_model)
+
+# Manual sum of squares calculation using fitted() and residuals()
+y_obs  <- women$weight
+y_hat  <- fitted(women_model)
+res    <- residuals(women_model)
+y_mean <- mean(y_obs)
+
+ss_total <- sum((y_obs - y_mean)^2)
+ss_reg   <- sum((y_hat - y_mean)^2)
+ss_error <- sum(res^2)
+
+print(paste("SS_Total             :", round(ss_total, 4)))
+print(paste("SS_Reg               :", round(ss_reg, 4)))
+print(paste("SS_Error             :", round(ss_error, 4)))
+print(paste("SS_Reg + SS_Error    :", round(ss_reg + ss_error, 4)))
+print(paste("R^2 = SS_Reg/SS_Total:", round(ss_reg / ss_total, 6)))
+```
+
+> **Your Interpretation (Task 9):**
+>**9. ANOVA Table and Sum of Squares Decomposition**
+
+The ANOVA table shows that the regression sum of squares is 3332.70, while the residual sum of squares is 30.23. The total sum of squares is 3362.93. By adding the regression and error sum of squares, we obtain 3362.93, which matches the total sum of squares and verifies the sum-of-squares identity. The F-statistic is 1433, with a p-value of 1.091 × 10⁻¹⁴. Since the p-value is less than 0.05, we reject the null hypothesis. This indicates that Height is a statistically significant predictor of Weight.
+> 
+
+------------------------------------------------------------------------
+
+### Task 10: Residual Diagnostics & Assumption Checking (5 Points)
+
+- **Goal:** Inspect the **Residuals vs. Fitted** plot and the **Normal Q–Q** plot to check linearity, constant variance (homoscedasticity), and normality of residuals.
+
+```{r part2-task10, fig.height=6}
+# 2x2 standard R diagnostic panel
+par(mfrow = c(2, 2))
+plot(women_model)
+par(mfrow = c(1, 1))
+
+# Dedicated Residuals vs. Fitted plot with zero reference line
+plot(fitted(women_model), residuals(women_model),
+     xlab = "Fitted Values (lbs)",
+     ylab = "Residuals (lbs)",
+     main = "Residuals vs. Fitted Values (women_model)",
+     pch = 19, col = "steelblue", cex = 1.2)
+grid(col = "gray80")
+abline(h = 0, col = "red", lty = 2, lwd = 2)
+```
+
+> **Your Interpretation (Task 10):**
+>**10(a) Linearity and Constant Variance**
+
+The Residuals vs. Fitted plot shows a slight U-shaped pattern around zero, suggesting that the relationship between Height and Weight may not be perfectly linear. Although the R² value is 0.991, the curved pattern indicates that a simple linear regression model may not fully capture the relationship.
+
+**10(b) Normality**
+
+The Normal Q-Q plot shows that the points generally follow the diagonal reference line, suggesting that the residuals are approximately normally distributed.
+
+**10(c) Conclusion**
+
+A high R² value alone does not guarantee that a regression model satisfies all assumptions. The diagnostic plots suggest that a quadratic or polynomial regression model may better describe Weight as a function of Height because it can account for the slight curved pattern in the residuals.
+
+
+------------------------------------------------------------------------
+
+## Final Submission Checklist
+
+Before submitting your GitHub URL on Canvas, verify that you have completed every item below:
+
+- [ ] Public GitHub repository **`BIO2105-Regression-Analysis`** contains all mandatory files (`README.md`, `BIO2105_Regression_Analysis.R`, `BIO2105_Regression_Analysis.Rmd`, and `BIO2105_Regression_Analysis.html` or `.pdf`).
+- [ ] `README.md` clearly describes the project objectives, repository structure, and steps to reproduce the analysis.
+- [ ] Knitted report (`.html` or `.pdf`) displays all code outputs, tables, and diagnostic plots without errors.
+- [ ] All $t$-statistics, $F$-statistics, degrees of freedom, $p$-values, confidence/prediction intervals, and $R^2$ values are accurately reported in your written interpretations.
+- [ ] Public GitHub repository URL is submitted on Canvas before the deadline.
